@@ -109,6 +109,12 @@ sed -i '/run_logged \$OMARCHY_INSTALL\/login\/alt-bootloaders\.sh/d' install/log
 # Remove pacman.sh from post-install/all.sh to prevent conflict with cachyos packages
 sed -i '/run_logged \$OMARCHY_INSTALL\/post-install\/pacman\.sh/d' install/post-install/all.sh
 
+# Skip Intel thermald.sh on CachyOS. CachyOS ships its own thermal management
+# (power-profiles-daemon / cachyos-settings), so installing thermald is
+# redundant and the script fails on `omarchy-pkg-add thermald` or
+# `systemctl enable thermald` on some Alder Lake+ ThinkPads.
+sed -i '/run_logged \$OMARCHY_INSTALL\/config\/hardware\/intel\/thermald\.sh/d' install/config/all.sh
+
 # Disable wpa_supplicant and configure NetworkManager to use iwd backend.
 # CachyOS enables wpa_supplicant by default, which conflicts with omarchy's iwd,
 # causing WiFi to appear connected but have no IP or connectivity.
@@ -161,6 +167,7 @@ echo " 7. Removed alt-bootloaders.sh from install.sh to avoid conflict with Cach
 echo " 8. Removed /etc/sddm.conf to avoid conflict with Omarchy UWSM session autologin."
 echo " 9. Disabled wpa_supplicant and configured NetworkManager to use iwd backend."
 echo "10. Pinned walker to omarchy repo to prevent CachyOS version conflict."
+echo "11. Skipped Intel thermald.sh (redundant with CachyOS thermal management)."
 echo ""
 echo "IMPORTANT: If you installed CachyOS without a deskop environment, you will not have a display manager installed." 
 echo "If this is the case, you will need to run the following command after this installation script is complete:"
