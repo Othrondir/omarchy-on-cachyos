@@ -52,7 +52,27 @@ if ! grep -q '^\[omarchy\]' /etc/pacman.conf; then
 else
     echo "Omarchy repository already present in pacman.conf, skipping."
 fi
-sudo pacman -Syu
+
+# Refresh keyrings and mirror rankings before the big sync. CachyOS mirrors can
+# fall behind on freshly published package revisions; running the rate-mirrors
+# script and refreshing keyrings up front avoids "failed retrieving file" errors
+# mid-install (e.g. thermald, dbus-glib).
+echo ""
+echo "Refreshing keyrings and CachyOS mirror rankings..."
+sudo pacman -Sy --needed --noconfirm archlinux-keyring cachyos-keyring || \
+  echo "WARN: keyring refresh failed — continuing anyway."
+
+if command -v cachyos-rate-mirrors &>/dev/null; then
+  sudo cachyos-rate-mirrors || echo "WARN: cachyos-rate-mirrors failed — continuing."
+fi
+
+if command -v reflector &>/dev/null; then
+  sudo reflector --latest 15 --sort rate --protocol https \
+    --save /etc/pacman.d/mirrorlist || echo "WARN: reflector failed — continuing."
+fi
+
+# Force a fresh DB sync (-yy) so any stale mirror state is discarded
+sudo pacman -Syyu --noconfirm
 
 # Remove CachyOS SDDM config
 if [ -f /etc/sddm.conf ]; then
