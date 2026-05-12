@@ -105,6 +105,30 @@ fi
 case "${CHOICE,,}" in
     r)
         if [[ "$STATE" == "partial" ]]; then
+            log "Re-applying CachyOS patches to $OMARCHY_HOME before resume..."
+            # Patches must be idempotent — sed -i with grep guards handles re-runs.
+            ALL_SH="$OMARCHY_HOME/install/config/all.sh"
+            LOGIN_ALL="$OMARCHY_HOME/install/login/all.sh"
+            POST_ALL="$OMARCHY_HOME/install/post-install/all.sh"
+
+            [[ -f "$ALL_SH" ]] && \
+                sed -i '/run_logged \$OMARCHY_INSTALL\/config\/hardware\/intel\/thermald\.sh/d' "$ALL_SH"
+
+            [[ -f "$LOGIN_ALL" ]] && {
+                sed -i '/run_logged \$OMARCHY_INSTALL\/login\/plymouth\.sh/d' "$LOGIN_ALL"
+                sed -i '/run_logged \$OMARCHY_INSTALL\/login\/limine-snapper\.sh/d' "$LOGIN_ALL"
+                sed -i '/run_logged \$OMARCHY_INSTALL\/login\/alt-bootloaders\.sh/d' "$LOGIN_ALL"
+            }
+
+            [[ -f "$POST_ALL" ]] && \
+                sed -i '/run_logged \$OMARCHY_INSTALL\/post-install\/pacman\.sh/d' "$POST_ALL"
+
+            # Re-copy custom nvidia.sh (in case it was overwritten by a prior reset)
+            if [[ -f "$SCRIPT_DIR/nvidia.sh" && -d "$OMARCHY_HOME/install/config/hardware" ]]; then
+                cp "$SCRIPT_DIR/nvidia.sh" "$OMARCHY_HOME/install/config/hardware/nvidia.sh"
+                chmod +x "$OMARCHY_HOME/install/config/hardware/nvidia.sh"
+            fi
+
             log "Resuming: re-running $OMARCHY_HOME/install.sh ..."
             cd "$OMARCHY_HOME" || { err "Cannot cd into $OMARCHY_HOME"; exit 1; }
             chmod +x install.sh
